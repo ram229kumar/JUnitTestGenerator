@@ -1,0 +1,33 @@
+plugins {
+    id 'org.springframework.boot' version '3.1.0'
+    id 'io.spring.dependency-management' version '1.1.0'
+    id 'java'
+}
+
+group = 'com.umich'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'  // Ensure you are using Java 17 or compatible version
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-aop' // For Reflection-based processing
+
+    // Lombok (to reduce boilerplate code)
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // JUnit for testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // JavaPoet (for generating Java code dynamically)
+    implementation 'com.squareup:javapoet:1.13.0'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
