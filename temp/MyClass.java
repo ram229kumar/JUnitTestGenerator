@@ -1,0 +1,1 @@
+public class MyClass { public int square(int num) { return num * num; } public String greet(String name) { return "Hello, " + name; } }
