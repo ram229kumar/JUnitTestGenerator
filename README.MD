@@ -7,6 +7,7 @@ This project takes Java Class Code(For now future developments could change to a
 
 - Java 17+
 - IDE (This Application is developed using Intellij)
+- Postman (To test the application)
 
 # Usage
 
@@ -23,8 +24,8 @@ git clone https://github.com/ram229kumar/JUnitTestGenerator.git
 ## API Usage
 
 - Since the run is started you have to see the terminal scrolling with showing "Completed initialization in Z(some time) ms" at the end if the application is cloned and built properly.
-- Using the URL : ```POST http://localhost:8080/api/generate-tests```
-- Sample Request body
+- Open postman application and create a new request using the URL : ```http://localhost:8080/api/generate-tests``` with ```POST``` Method.
+- Sample Request body (JSON Format)
 ```json
 {
     "sourceCode": "public class MyClass { public int square(int num) { return num * num; } public String greet(String name) { return \"Hello, \" + name; } }"
