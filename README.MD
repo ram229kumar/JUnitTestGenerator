@@ -1,0 +1,55 @@
+# Introduction
+
+A Spring boot application which can automatically generate simple JUnit5 test cases.
+This project takes Java Class Code(For now future developments could change to an entire application) via a REST API, compiles the code dynamically and then uses a simple parser to extract the classes & methods in them to generate corresponding JUnit test class.
+
+# Prerequisites
+
+- Java 17+
+- IDE (This Application is developed using Intellij)
+
+# Usage
+
+## Cloning the repo
+ 
+- In order to use the repo we are going to clone it first to our local systems which can be done either using CLI or Git UI.
+```shell
+git clone https://github.com/ram229kumar/JUnitTestGenerator.git
+```
+
+- Once the repo is cloned you can build the project using the UI.
+- After that you can run the application by going to the main [JUnitTestGeneratorApplication.java](/src/main/java/com/umich/junittestgenerator/JUnitTestGeneratorApplication.java)
+
+## API Usage
+
+- Since the run is started you have to see the terminal scrolling with showing "Completed initialization in Z(some time) ms" at the end if the application is cloned and built properly.
+- Using the URL : ```POST http://localhost:8080/api/generate-tests```
+- Sample Request body
+```json
+{
+    "sourceCode": "public class MyClass { public int square(int num) { return num * num; } public String greet(String name) { return \"Hello, \" + name; } }"
+}
+```
+
+- Once the request been sent you will be able to see the following output.
+
+```java
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class MyClassTest {
+
+    @Test
+    public void testSquare() {
+        MyClass obj = new MyClass();
+        // TODO: add test logic for method square
+    }
+
+    @Test
+    public void testGreet() {
+        MyClass obj = new MyClass();
+        // TODO: add test logic for method greet
+    }
+
+}
+```
