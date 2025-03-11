@@ -24,7 +24,7 @@ git clone https://github.com/ram229kumar/JUnitTestGenerator.git
 ## API Usage
 
 - Since the run is started you have to see the terminal scrolling with showing "Completed initialization in Z(some time) ms" at the end if the application is cloned and built properly.
-- Open postman application and create a new request using the URL : ```http://localhost:8080/api/generate-tests``` with ```POST``` Method.
+- Open postman application and create a new request using the URL : ```http://localhost:8080/api/test-generator/generate``` with ```POST``` Method.
 - Sample Request body (JSON Format)
 ```json
 {
