@@ -54,3 +54,45 @@ public class MyClassTest {
 
 }
 ```
+
+- March 10th 2025
+- The updated code's sample request:
+
+```json
+{
+    "sourceCode": "public class MyClass { public int square(int num) { return num * num; } public String greet(String name) { return \"Hello, \" + name; } }"
+}
+```
+
+- Response
+```java
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class MyClassTest {
+
+    private final MyClass instance = new MyClass();
+
+    @Test
+    public void testGreet() {
+        String result = instance.greet(null);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testSquare() {
+        int result = instance.square(0);
+        assertNotNull(result);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2, 3})
+    public void testSquareWithParams(int param) {
+        int result = instance.square(param);
+        assertTrue(result >= 0);
+    }
+
+}
+```
