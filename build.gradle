@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.umich'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '17'  // Ensure you are using Java 17 or compatible version
+sourceCompatibility = '21'  // Ensure you are using Java 21 or compatible version
 
 repositories {
     mavenCentral()
@@ -18,8 +18,15 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-aop' // For Reflection-based processing
 
     // Lombok (to reduce boilerplate code)
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    compileOnly("org.springframework.boot:spring-boot-devtools")
+
+    // Apache HttpClient for calling OpenAI API
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2'
+
+    // Jackson for JSON Parsing
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
 
     // JUnit for testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -28,6 +35,9 @@ dependencies {
     implementation 'com.squareup:javapoet:1.13.0'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.addAll([
+            '--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+            '--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED'
+    ])
 }

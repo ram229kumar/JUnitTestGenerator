@@ -16,7 +16,16 @@ import java.util.StringJoiner;
 @Service
 public class TestGeneratorService {
 
-    public String generateTestCases(String sourceCode) {
+    private final LLMClient llmClient;
+
+    public TestGeneratorService(LLMClient llmClient) {
+        this.llmClient = llmClient;
+    }
+
+    public String generateTestCases(String sourceCode){
+        return llmClient.generateTestCases(sourceCode);
+    }
+    public String generateTestCasesOld(String sourceCode) {
         try {
             // Extract the class name from the source code
             String className = extractClassName(sourceCode);

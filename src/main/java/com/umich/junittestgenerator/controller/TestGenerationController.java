@@ -12,8 +12,13 @@ public class TestGenerationController {
     @Autowired
     private TestGeneratorService testGeneratorService;
 
+    @PostMapping("/ai-generate")
+    public String generateAITests(@RequestBody SourceCodeRequest request) {
+        return testGeneratorService.generateTestCases(request.getSourceCode());
+    }
+
     @PostMapping("/generate")
     public String generateTests(@RequestBody SourceCodeRequest request) {
-        return testGeneratorService.generateTestCases(request.getSourceCode());
+        return testGeneratorService.generateTestCasesOld(request.getSourceCode());
     }
 }
