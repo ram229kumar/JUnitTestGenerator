@@ -29,9 +29,7 @@ public class LLMClient {
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setDoOutput(true);
 
-            String prompt = "Generate a JUnit 5 test case for this Java class and Only respond with code as plain text without code block syntax around it:\n" + sourceCode;
-            String escapedPrompt = prompt.replace("\"", "\\\"").replace("\n", "\\n");
-            String requestBody = "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"" + escapedPrompt + "\"}],\"max_tokens\":500}";
+            String requestBody = getString(sourceCode);
 
             logger.info("Request Body: " + requestBody); // Log request body
 
@@ -72,5 +70,12 @@ public class LLMClient {
             e.printStackTrace(); // Log stack trace
             return "Error: " + e.getMessage();
         }
+    }
+
+    private static String getString(String sourceCode) {
+        String prompt = "Generate a JUnit 5 test case for this Java class. If any method interacts with an external service, repository, or another class, use Mockito to mock it Ensure tests include both valid and invalid inputs, exception scenarios, and verification of method calls and Only respond with code as plain text without code block syntax around it:\n" + sourceCode;
+        String escapedPrompt = prompt.replace("\"", "\\\"").replace("\n", "\\n");
+        String requestBody = "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"" + escapedPrompt + "\"}],\"max_tokens\":500}";
+        return requestBody;
     }
 }
