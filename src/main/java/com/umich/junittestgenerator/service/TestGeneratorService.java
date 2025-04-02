@@ -53,7 +53,11 @@ public class TestGeneratorService {
             Class<?> clazz = Class.forName(className, true, classLoader);
 
             // Generate the test class using reflection
-            return generateTestClass(clazz);
+            String testClassContent = generateTestClass(clazz);
+            // Write the generated test class to a Java file
+            String testClassPath = tempDir + "/" + className + "Test.java";
+            Files.write(Paths.get(testClassPath), testClassContent.getBytes());
+            return testClassContent;
         } catch (Exception e) {
             return "Error: " + e.getMessage();
         }
