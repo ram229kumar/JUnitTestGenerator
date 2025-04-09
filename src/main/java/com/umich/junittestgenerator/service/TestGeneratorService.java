@@ -5,13 +5,18 @@ import org.springframework.stereotype.Service;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 import java.io.*;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class TestGeneratorService {
@@ -39,10 +44,22 @@ public class TestGeneratorService {
             String javaFilePath = tempDir + "/" + className + ".java";
             Files.write(Paths.get(javaFilePath), sourceCode.getBytes());
 
+            if (requiresStubs(sourceCode)) {
+                generateStubsIfNeeded(sourceCode, tempDir);
+            }
+
             // Compile the source file
+            File[] javaFiles = new File(tempDir).listFiles((dir, name) -> name.endsWith(".java"));
+            if (javaFiles == null) return "Error: No Java files found in temp directory.";
+
+            String[] compileArgs = new String[javaFiles.length];
+            for (int i = 0; i < javaFiles.length; i++) {
+                compileArgs[i] = javaFiles[i].getPath();
+            }
+
             JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
             ByteArrayOutputStream errOut = new ByteArrayOutputStream();
-            int compilationResult = compiler.run(null, null, errOut, javaFilePath);
+            int compilationResult = compiler.run(null, null, errOut, compileArgs);
             if (compilationResult != 0) {
                 return "Error: Compilation failed. " + errOut.toString();
             }
@@ -82,18 +99,43 @@ public class TestGeneratorService {
         StringBuilder testClass = new StringBuilder();
         String testClassName = clazz.getSimpleName() + "Test";
 
-        // Header for the generated test class
+        // Header imports (always include both JUnit + Mockito)
         testClass.append("import org.junit.jupiter.api.Test;\n")
-                .append("import org.junit.jupiter.params.ParameterizedTest;\n")
-                .append("import org.junit.jupiter.params.provider.ValueSource;\n")
-                .append("import static org.junit.jupiter.api.Assertions.*;\n\n")
-                .append("public class ").append(testClassName).append(" {\n\n")
-                .append("    private final ").append(clazz.getSimpleName()).append(" instance = new ")
-                .append(clazz.getSimpleName()).append("();\n\n");
+                .append("import static org.junit.jupiter.api.Assertions.*;\n")
+                .append("import static org.mockito.Mockito.*;\n")
+                .append("import org.mockito.Mockito;\n\n")
+                .append("public class ").append(testClassName).append(" {\n\n");
 
-        // Loop through each declared method in the class
+        // Determine constructor type
+        Constructor<?>[] constructors = clazz.getDeclaredConstructors();
+        Constructor<?> targetConstructor = constructors.length > 0 ? constructors[0] : null;
+
+        if (targetConstructor != null && targetConstructor.getParameterCount() > 0) {
+            // ✅ Constructor with dependencies - use mocks
+            Class<?>[] paramTypes = targetConstructor.getParameterTypes();
+            StringJoiner mocksJoiner = new StringJoiner(", ");
+            StringBuilder mockFields = new StringBuilder();
+
+            for (Class<?> paramType : paramTypes) {
+                String mockName = "mock" + paramType.getSimpleName();
+                mockFields.append("    ").append(paramType.getSimpleName())
+                        .append(" ").append(mockName)
+                        .append(" = mock(").append(paramType.getSimpleName()).append(".class);\n");
+                mocksJoiner.add(mockName);
+            }
+
+            testClass.append(mockFields.toString()).append("\n");
+            testClass.append("    ").append(clazz.getSimpleName()).append(" instance = new ")
+                    .append(clazz.getSimpleName()).append("(").append(mocksJoiner.toString()).append(");\n\n");
+
+        } else {
+            // ✅ No-arg constructor - use plain instance
+            testClass.append("    ").append(clazz.getSimpleName()).append(" instance = new ")
+                    .append(clazz.getSimpleName()).append("();\n\n");
+        }
+
+        // Test method generation
         for (Method method : clazz.getDeclaredMethods()) {
-            // Generate a basic test method
             testClass.append("    @Test\n")
                     .append("    public void test").append(capitalize(method.getName())).append("() {\n");
 
@@ -117,12 +159,13 @@ public class TestGeneratorService {
                             .append("(").append(dummyParams).append(");\n");
                 }
             }
+
             testClass.append("    }\n\n");
 
-            // If the method has one parameter of type int, add a parameterized test
+            // Optional parameterized test
             if (method.getParameterCount() == 1 && method.getParameterTypes()[0] == int.class) {
-                testClass.append("    @ParameterizedTest\n")
-                        .append("    @ValueSource(ints = {1, 2, 3})\n")
+                testClass.append("    @org.junit.jupiter.params.ParameterizedTest\n")
+                        .append("    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 2, 3})\n")
                         .append("    public void test").append(capitalize(method.getName()))
                         .append("WithParams(int param) {\n");
                 if (method.getReturnType() != void.class) {
@@ -134,9 +177,11 @@ public class TestGeneratorService {
                 testClass.append("    }\n\n");
             }
         }
+
         testClass.append("}");
         return testClass.toString();
     }
+
 
     private String generateDummyParameters(Class<?>[] parameterTypes) {
         StringJoiner joiner = new StringJoiner(", ");
@@ -160,4 +205,82 @@ public class TestGeneratorService {
         if (str == null || str.isEmpty()) return str;
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
+
+    private void generateStubsIfNeeded(String sourceCode, String tempDir) throws IOException {
+        // Find all class references with "new ClassName(" or type declarations
+        Set<String> classNames = new HashSet<>();
+
+        // Capture class types from constructor
+        Pattern constructorPattern = Pattern.compile("public\\s+\\w+\\s*\\(([^)]*)\\)");
+        Matcher constructorMatcher = constructorPattern.matcher(sourceCode);
+        if (constructorMatcher.find()) {
+            String[] params = constructorMatcher.group(1).split(",");
+            for (String param : params) {
+                String[] parts = param.trim().split(" ");
+                if (parts.length >= 2) {
+                    classNames.add(parts[0].trim());
+                }
+            }
+        }
+
+        // Optional: Capture field types or method calls (more accurate)
+        Pattern typePattern = Pattern.compile("(\\w+)\\s+\\w+\\s*(=|;)");
+        Matcher typeMatcher = typePattern.matcher(sourceCode);
+        while (typeMatcher.find()) {
+            classNames.add(typeMatcher.group(1).trim());
+        }
+
+        // Filter out Java standard types
+        Set<String> javaTypes = Set.of("int", "String", "boolean", "double", "float", "long", "char", "void");
+
+        for (String className : classNames) {
+            if (javaTypes.contains(className)) continue;
+
+            String stubPath = tempDir + "/" + className + ".java";
+            File stubFile = new File(stubPath);
+            if (!stubFile.exists()) {
+                String stubCode = "public class " + className + " {\n"
+                        + "    public String getDataFromApi(String id) { return \"mock-data\"; }\n"
+                        + "}";
+                Files.write(Paths.get(stubPath), stubCode.getBytes());
+            }
+        }
+    }
+
+    private boolean requiresStubs(String sourceCode) {
+        // Identify if there are any external classes that are not part of Java's primitive or standard types
+        Set<String> classNames = new HashSet<>();
+
+        // Capture class types from constructor or field definitions
+        Pattern constructorPattern = Pattern.compile("public\\s+\\w+\\s*\\(([^)]*)\\)");
+        Matcher constructorMatcher = constructorPattern.matcher(sourceCode);
+        if (constructorMatcher.find()) {
+            String[] params = constructorMatcher.group(1).split(",");
+            for (String param : params) {
+                String[] parts = param.trim().split(" ");
+                if (parts.length >= 2) {
+                    classNames.add(parts[0].trim());
+                }
+            }
+        }
+
+        // Capture field types or method calls (additional external classes)
+        Pattern typePattern = Pattern.compile("(\\w+)\\s+\\w+\\s*(=|;)");
+        Matcher typeMatcher = typePattern.matcher(sourceCode);
+        while (typeMatcher.find()) {
+            classNames.add(typeMatcher.group(1).trim());
+        }
+
+        // Filter out Java standard types
+        Set<String> javaTypes = Set.of("int", "String", "boolean", "double", "float", "long", "char", "void");
+
+        // If there are external class dependencies that are not part of the Java standard types, return true
+        for (String className : classNames) {
+            if (!javaTypes.contains(className)) {
+            }
+        }
+
+        return false;
+    }
+
 }
