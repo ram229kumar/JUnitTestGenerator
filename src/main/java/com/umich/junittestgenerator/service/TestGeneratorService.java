@@ -277,6 +277,7 @@ public class TestGeneratorService {
         // If there are external class dependencies that are not part of the Java standard types, return true
         for (String className : classNames) {
             if (!javaTypes.contains(className)) {
+                return true;
             }
         }
 
