@@ -251,3 +251,37 @@ public class MyServiceTest {
     }
 }
 ```
+
+- With the branch **mockito-test**
+- **NOTE: Please delete all the .java file from temp folder to run the code.**
+- If there is a need the API will mock the needed inputs and gives an output class with the mocked service implementation.
+
+- Request
+
+```json
+{
+    "sourceCode": "public class MyService { private final ExternalApiClient apiClient; public MyService(ExternalApiClient apiClient) { this.apiClient = apiClient; } public String fetchData(String id) { if (id == null || id.isEmpty()) { throw new IllegalArgumentException(\"ID cannot be null or empty\"); } return apiClient.getDataFromApi(id); } }"
+}
+```
+
+```java
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import org.mockito.Mockito;
+
+public class MyServiceTest {
+
+    ExternalApiClient mockExternalApiClient = mock(ExternalApiClient.class);
+
+    MyService instance = new MyService(mockExternalApiClient);
+
+    @Test
+    public void testFetchData() {
+        String result = instance.fetchData(null);
+        assertNotNull(result);
+    }
+
+}
+
+```
